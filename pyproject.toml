@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pbir-mock"
+version = "0.1.0"
+description = "PBIR inventory, mock viewer, and validation CLI."
+requires-python = ">=3.9"
+dependencies = [
+  "pymupdf>=1.24",
+  "pillow>=10.0"
+]
+
+[project.scripts]
+pbir-mock = "pbir_mock.cli:main"
