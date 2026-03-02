@@ -38,6 +38,54 @@ def _as_number(data: dict[str, Any], key: str) -> float:
     return 0.0
 
 
+def _literal_int(value: Any) -> int:
+    if isinstance(value, (int, float)):
+        return int(value)
+    if isinstance(value, str):
+        digits = "".join(ch for ch in value if ch.isdigit())
+        if digits:
+            return int(digits)
+    return 0
+
+
+def _navigator_layout(visual_payload: dict[str, Any]) -> tuple[int, int, int]:
+    try:
+        props = visual_payload["visual"]["objects"]["layout"][0]["properties"]
+        row_raw = props.get("rowCount", {}).get("expr", {}).get("Literal", {}).get("Value", 0)
+        col_raw = props.get("columnCount", {}).get("expr", {}).get("Literal", {}).get("Value", 0)
+        ori_raw = props.get("orientation", {}).get("expr", {}).get("Literal", {}).get("Value", 0)
+        return (_literal_int(row_raw), _literal_int(col_raw), _literal_int(ori_raw))
+    except (KeyError, IndexError, TypeError):
+        return (0, 0, 0)
+
+
+def _navigator_targets(visual_payload: dict[str, Any], known_page_ids: set[str]) -> list[str]:
+    out: list[str] = []
+    seen: set[str] = set()
+    try:
+        pages_cfg = visual_payload["visual"]["objects"].get("pages", [])
+    except (KeyError, TypeError):
+        pages_cfg = []
+    if not isinstance(pages_cfg, list):
+        return out
+
+    for item in pages_cfg:
+        if not isinstance(item, dict):
+            continue
+        selector = item.get("selector", {})
+        candidates: list[str] = []
+        if isinstance(selector, dict):
+            for key in ("id", "pageId", "section", "sectionId", "metadata"):
+                value = selector.get(key)
+                if isinstance(value, str) and value.strip():
+                    candidates.append(value.strip())
+        for candidate in candidates:
+            if candidate in known_page_ids and candidate not in seen:
+                seen.add(candidate)
+                out.append(candidate)
+    return out
+
+
 def _link_props(visual_payload: dict[str, Any]) -> dict[str, Any]:
     try:
         return visual_payload["visual"]["visualContainerObjects"]["visualLink"][0]["properties"]
@@ -56,6 +104,7 @@ def parse_pages_and_visuals(definition_dir: Path) -> list[Page]:
             page_ids.append(pid)
             seen.add(pid)
 
+    known_page_ids = set(page_ids)
     pages: list[Page] = []
     for page_id in page_ids:
         page_file = definition_dir / "pages" / page_id / "page.json"
@@ -79,6 +128,8 @@ def parse_pages_and_visuals(definition_dir: Path) -> list[Page]:
             visual_type = str(visual_payload.get("visual", {}).get("visualType", "unknown"))
             title = _extract_title(visual_payload)
             props = _link_props(visual_payload)
+            nav_rows, nav_cols, nav_orientation = _navigator_layout(visual_payload)
+            nav_targets = _navigator_targets(visual_payload, known_page_ids)
             page.visuals.append(
                 Visual(
                     page_id=page.page_id,
@@ -97,6 +148,10 @@ def parse_pages_and_visuals(definition_dir: Path) -> list[Page]:
                     bookmark_target=extract_literal_value(props, ["bookmark", "expr", "Literal", "Value"]),
                     web_url=extract_literal_value(props, ["webUrl", "expr", "Literal", "Value"]),
                     is_hidden=bool(visual_payload.get("isHidden", False)),
+                    navigator_rows=nav_rows,
+                    navigator_columns=nav_cols,
+                    navigator_orientation=nav_orientation,
+                    navigator_target_ids=nav_targets,
                 )
             )
 

@@ -22,6 +22,10 @@ class Visual:
     bookmark_target: str = ""
     web_url: str = ""
     is_hidden: bool = False
+    navigator_rows: int = 0
+    navigator_columns: int = 0
+    navigator_orientation: int = 0
+    navigator_target_ids: list[str] = field(default_factory=list)
     seq: int = 0
     label: str = ""
 

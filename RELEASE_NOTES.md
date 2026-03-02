@@ -1,5 +1,42 @@
 # Release Notes
 
+## v2.0.0
+Navigator stability and viewer calibration release.
+
+### Added
+- Robust `pageNavigator` interaction model in HTML viewer:
+  - single overlay per navigator visual
+  - click hit-test via row/column math from PBIR layout
+  - deterministic target resolution using explicit navigator targets or PBIR page order
+- Viewer debug mode:
+  - `Nav Debug` toggle
+  - navigator bounding box + row/column grid lines
+  - click diagnostics in browser console
+- Calibration strategy upgrade:
+  - global median content-bounds mapping across pages
+  - automatic per-page outlier fallback (`>15px` margin deviation)
+- Fit-to-viewport scaling:
+  - uses both available width and height
+  - capped at 100% unless manual zoom selected
+- Parser support for navigator target metadata:
+  - `navigator_target_ids` on `Visual`
+
+### Changed
+- Removed heuristic per-tab hotspot generation for `pageNavigator` (root cause of drift/splitting).
+- `mock/report.json` now carries:
+  - `pageOrderIds`
+  - `contentBoundsMode`
+  - navigator metadata fields for deterministic runtime click mapping
+
+### Fixed
+- Page navigator drift across pages with different background margins.
+- Split/floating navigator hotspots on compact navigator bars.
+- Inconsistent click areas across multi-row navigators.
+- Fit mode requiring frequent browser zoom adjustment on large pages.
+
+### Packaging
+- Rebuilt `dist/pbir-mock.exe` for v2 with no `build_exe.ps1` changes required.
+
 ## v1.0.0
 Initial public version of `pbir-mock`.
 
@@ -41,4 +78,3 @@ Initial public version of `pbir-mock`.
 ### Packaging
 - Added Windows EXE build script (`build_exe.ps1`)
 - PyInstaller one-file packaging support for `pbir-mock.exe`
-
